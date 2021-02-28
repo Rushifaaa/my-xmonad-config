@@ -1,65 +1,60 @@
---
--- xmonad example config file.
---
--- A template showing all available configuration hooks,
--- and how to override the defaults in your own xmonad.hs conf file.
---
--- Normally, you'd only override those defaults you care about.
---
-
 import XMonad
-import Data.Monoid
 import System.Exit
+
+-- Util
 import XMonad.Util.SpawnOnce
 import XMonad.Util.Run
+
+-- Hooks
 import XMonad.Hooks.ManageDocks
+import XMonad.Hooks.DynamicLog
+import XMonad.Hooks.EwmhDesktops
+import XMonad.Hooks.WorkspaceHistory
+import XMonad.Hooks.ServerMode
+
+-- Layout
+import XMonad.Layout.Spacing
+import XMonad.Layout.Gaps
 
 import qualified XMonad.StackSet as W
+
+-- Data
+import Data.Maybe (fromJust)
 import qualified Data.Map        as M
 
--- The preferred terminal program, which is used in a binding below and by
--- certain contrib modules.
---
-myTerminal      = "urxvt"
+-- Default Programs
+myTerminal :: String
+myTerminal = "urxvt"
 
--- Whether focus follows the mouse pointer.
+-- Focus Settings
 myFocusFollowsMouse :: Bool
 myFocusFollowsMouse = True
 
--- Whether clicking on a window to focus also passes the click to the window
 myClickJustFocuses :: Bool
 myClickJustFocuses = False
 
--- Width of the window border in pixels.
---
+-- Border
+myBorderWidth :: Dimension
 myBorderWidth   = 2
 
--- modMask lets you specify which modkey you want to use. The default
--- is mod1Mask ("left alt").  You may also consider using mod3Mask
--- ("right alt"), which does not conflict with emacs keybindings. The
--- "windows key" is usually mod4Mask.
---
-myModMask       = mod1Mask
-
--- The default number of workspaces (virtual screens) and their names.
--- By default we use numeric strings, but any string may be used as a
--- workspace name. The number of workspaces is determined by the length
--- of this list.
---
--- A tagging example:
---
--- > workspaces = ["web", "irc", "code" ] ++ map show [4..9]
---
-myWorkspaces    = ["1","2","3","4","5","6","7","8","9"]
-
--- Border colors for unfocused and focused windows, respectively.
---
+myNormalBorderColor :: String
 myNormalBorderColor  = "#dddddd"
+
+myFocusedBorderColor :: String
 myFocusedBorderColor = "#ff0000"
 
-------------------------------------------------------------------------
--- Key bindings. Add, modify or remove key bindings here.
---
+-- ModMask
+myModMask :: KeyMask
+myModMask       = mod1Mask
+
+myWorkspaces :: [[Char]]
+myWorkspaces    = ["www","code","3","4","5","6","7","8","9"]
+myWorkspaceIndices = M.fromList $ zipWith (,) myWorkspaces [1..]
+
+clickable ws = "<action=xdotool key super+"++show i++">"++ws++"</action>"
+  where i = fromJust $ M.lookup ws myWorkspaceIndices
+
+myKeys :: XConfig Layout -> M.Map (KeyMask, KeySym) (X ())
 myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
     -- launch a terminal
@@ -69,7 +64,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm,               xK_p     ), spawn "dmenu_run")
 
     -- launch gmrun
-    , ((modm .|. shiftMask, xK_p     ), spawn "gmrun")
+    , ((modm .|. shiftMask, xK_p     ), spawn "rofi -show combi")
 
     -- close focused window
     , ((modm .|. shiftMask, xK_c     ), kill)
@@ -129,7 +124,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm .|. shiftMask, xK_q     ), io (exitWith ExitSuccess))
 
     -- Restart xmonad
-    , ((modm              , xK_q     ), spawn "xmonad --recompile; xmonad --restart")
+    , ((modm              , xK_q     ), spawn "xmonad --recompile; killall xmobar;  xmonad --restart")
 
     -- Run xmessage with a summary of the default keybindings (useful for beginners)
     , ((modm .|. shiftMask, xK_slash ), spawn ("echo \"" ++ help ++ "\" | xmessage -file -"))
@@ -156,7 +151,8 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
 ------------------------------------------------------------------------
 -- Mouse bindings: default actions bound to mouse events
---
+------------------------------------------------------------------------
+myMouseBindings :: XConfig l -> M.Map (KeyMask, Button) (Window -> X ())
 myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 
     -- mod-button1, Set the window to floating mode and move by dragging
@@ -184,10 +180,14 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 -- The available layouts.  Note that each layout is separated by |||,
 -- which denotes layout choice.
 --
+
 myLayout = avoidStruts(tiled ||| Mirror tiled ||| Full)
   where
      -- default tiling algorithm partitions the screen into two panes
-     tiled   = Tall nmaster delta ratio
+     tiled   = gaps [(U,16), (R,16)] $ gaps [(L,16), (D,16)]
+             $ spacing 8
+             -- $ spacingRaw True (Border 0 0 0 0) True (Border 0 0 0 0) True
+             $ Tall nmaster delta ratio
 
      -- The default number of windows in the master pane
      nmaster = 1
@@ -213,6 +213,7 @@ myLayout = avoidStruts(tiled ||| Mirror tiled ||| Full)
 -- To match on the WM_NAME, you can use 'title' in the same way that
 -- 'className' and 'resource' are used below.
 --
+
 myManageHook = composeAll
     [ className =? "MPlayer"        --> doFloat
     , className =? "Gimp"           --> doFloat
@@ -236,7 +237,10 @@ myEventHook = mempty
 -- Perform an arbitrary action on each internal state change or X event.
 -- See the 'XMonad.Hooks.DynamicLog' extension for examples.
 --
+
+myLogHook :: X ()
 myLogHook = return ()
+
 
 ------------------------------------------------------------------------
 -- Startup hook
@@ -246,27 +250,23 @@ myLogHook = return ()
 -- per-workspace layout choices.
 --
 -- By default, do nothing.
+myStartupHook :: X ()
 myStartupHook = do
-	spawnOnce "nitrogen --restore &"
-	spawnOnce "picom &"
-	
+  spawnOnce "nitrogen --restore &"
+  spawnOnce "picom &"
 
 ------------------------------------------------------------------------
 -- Now run xmonad with all the defaults we set up.
 
 -- Run xmonad with the settings you specify. No need to modify this.
 --
+
+
+
+main :: IO ()
 main = do
   xmproc <- spawnPipe "xmobar -x 0 /home/devil/.config/xmobar/.xmobarrc"
-  xmonad $ docks defaults
-
--- A structure containing your configuration settings, overriding
--- fields in the default config. Any you don't override, will
--- use the defaults defined in xmonad/XMonad/Config.hs
---
--- No need to modify this.
---
-defaults = def {
+  xmonad $ docks $ ewmh def {
       -- simple stuff
         terminal           = myTerminal,
         focusFollowsMouse  = myFocusFollowsMouse,
@@ -283,10 +283,25 @@ defaults = def {
 
       -- hooks, layouts
         layoutHook         = myLayout,
-        manageHook         = myManageHook,
-        handleEventHook    = myEventHook,
-        logHook            = myLogHook,
-        startupHook        = myStartupHook
+        manageHook         = myManageHook <+> manageDocks,
+        handleEventHook    = myEventHook
+                             <+> serverModeEventHookCmd
+                             <+> serverModeEventHook
+                             <+> serverModeEventHookF "XMONAD_PRINT" (io . putStrLn)
+                             <+> docksEventHook,
+        startupHook        = myStartupHook,
+        logHook            = workspaceHistoryHook <+> myLogHook <+> dynamicLogWithPP xmobarPP
+                                { ppOutput = \x -> hPutStrLn xmproc x
+                                , ppCurrent = xmobarColor "#98be65" "" . wrap "[" "]"
+                                , ppVisible = xmobarColor "#98be65" "" . clickable
+                                , ppHidden = xmobarColor "#82AAFF" "" . wrap "*" "" . clickable
+                                , ppHiddenNoWindows = xmobarColor "#c792ea" "" . clickable
+                                , ppTitle = xmobarColor "#b3afc2" "" . shorten 60
+                                --, ppSep = "<fc=#666666> <fn=1>|</fn></fc>"
+                                , ppUrgent = xmobarColor "#C45500" "" . wrap "!" "!"
+                                , ppExtras = []
+                                , ppOrder = \(ws:l:t:ex) -> [ws,l]++ex++[t]
+                                }
     }
 
 -- | Finally, a copy of the default bindings in simple textual tabular format.
