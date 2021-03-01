@@ -1,30 +1,33 @@
 import XMonad
 import System.Exit
 
+-- Actions
+import XMonad.Actions.CycleWS
+
 -- Util
-import XMonad.Util.SpawnOnce
 import XMonad.Util.Run
+import XMonad.Util.SpawnOnce
 
 -- Hooks
-import XMonad.Hooks.ManageDocks
 import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.EwmhDesktops
-import XMonad.Hooks.WorkspaceHistory
+import XMonad.Hooks.ManageDocks
 import XMonad.Hooks.ServerMode
+import XMonad.Hooks.WorkspaceHistory
 
 -- Layout
-import XMonad.Layout.Spacing
 import XMonad.Layout.Gaps
+import XMonad.Layout.Spacing
 
 import qualified XMonad.StackSet as W
 
 -- Data
-import Data.Maybe (fromJust)
 import qualified Data.Map        as M
+import Data.Maybe (fromJust)
 
 -- Default Programs
 myTerminal :: String
-myTerminal = "urxvt"
+myTerminal = "alacritty"
 
 -- Focus Settings
 myFocusFollowsMouse :: Bool
@@ -38,10 +41,10 @@ myBorderWidth :: Dimension
 myBorderWidth   = 2
 
 myNormalBorderColor :: String
-myNormalBorderColor  = "#dddddd"
+myNormalBorderColor  = "#808080"
 
 myFocusedBorderColor :: String
-myFocusedBorderColor = "#ff0000"
+myFocusedBorderColor = "#add8e6"
 
 -- ModMask
 myModMask :: KeyMask
@@ -51,7 +54,7 @@ myWorkspaces :: [[Char]]
 myWorkspaces    = ["www","code","3","4","5","6","7","8","9"]
 myWorkspaceIndices = M.fromList $ zipWith (,) myWorkspaces [1..]
 
-clickable ws = "<action=xdotool key super+"++show i++">"++ws++"</action>"
+clickable ws = "<action=xdotool key alt+"++show i++">"++ws++"</action>"
   where i = fromJust $ M.lookup ws myWorkspaceIndices
 
 myKeys :: XConfig Layout -> M.Map (KeyMask, KeySym) (X ())
@@ -79,16 +82,13 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm,               xK_n     ), refresh)
 
     -- Move focus to the next window
-    , ((modm,               xK_Tab   ), windows W.focusDown)
-
-    -- Move focus to the next window
     , ((modm,               xK_j     ), windows W.focusDown)
 
     -- Move focus to the previous window
     , ((modm,               xK_k     ), windows W.focusUp  )
 
     -- Move focus to the master window
-    , ((modm,               xK_m     ), windows W.focusMaster  )
+    , ((modm,               xK_m     ), windows W.focusMaster)
 
     -- Swap the focused window and the master window
     , ((modm,               xK_Return), windows W.swapMaster)
@@ -147,8 +147,18 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     [((m .|. modm, key), screenWorkspace sc >>= flip whenJust (windows . f))
         | (key, sc) <- zip [xK_w, xK_e, xK_r] [0..]
         , (f, m) <- [(W.view, 0), (W.shift, shiftMask)]]
+   ++
 
+    --
+    -- Keybindings to move a window to the next or prev Workspace
+    -- Tab Keybinding for Switching Workspaces
+    --
 
+   [ ((modm,                 xK_Tab ), nextWS)
+   , ((modm,                 xK_Up  ), nextWS)
+   , ((modm,                 xK_Down), prevWS)
+   , ((modm .|. shiftMask,   xK_Up  ), shiftToNext >> nextWS) -- Move window to Next Workspace and move to it
+   , ((modm .|. shiftMask,   xK_Down), shiftToPrev >> prevWS)] -- Move windo to Previous Workspace and move to it
 ------------------------------------------------------------------------
 -- Mouse bindings: default actions bound to mouse events
 ------------------------------------------------------------------------
@@ -157,7 +167,7 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 
     -- mod-button1, Set the window to floating mode and move by dragging
     [ ((modm, button1), (\w -> focus w >> mouseMoveWindow w
-                                       >> windows W.shiftMaster))
+                                       >> windows W.shiftMaster ))
 
     -- mod-button2, Raise the window to the top of the stack
     , ((modm, button2), (\w -> focus w >> windows W.shiftMaster))
